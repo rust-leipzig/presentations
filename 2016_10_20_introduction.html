@@ -75,18 +75,19 @@ if (x == 5) { // The "Check"
 }
                         </code></pre>
                     </section>
-                </section>
-                <section>
-                    <h2>Why is this a problem?</h2>
-                    <ul>
-                        <li>Runtine failures like segfaults are not recoverable.</li>
-                        <li>Extremely common source of security bugs.</li>
-                        <li>Existing solutions for safety are slow and usually require a garbage collection.</li>
-                        <li>Code Review for such corner cases slows down the development.</li>
-                    </ul>
-                </section>
-                <section>
-                    <img class="plain" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Rust_programming_language_black_logo.svg/480px-Rust_programming_language_black_logo.svg.png">
+                    <section>
+                        <h2>Why is this a problem?</h2>
+                        <ul>
+                            <li>Runtine failures like segfaults are not recoverable.</li>
+                            <li>Extremely common source of security bugs.</li>
+                            <li>Existing solutions for safety are slow and usually require a garbage collection.</li>
+                            <li>Non type safety leads into common pitfalls (void pointers, wrong casts).</li>
+                            <li>Code Review for such corner cases slows down the development.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <img class="plain" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Rust_programming_language_black_logo.svg/480px-Rust_programming_language_black_logo.svg.png">
+                    </section>
                 </section>
                 <section>
                     <section>
@@ -473,7 +474,10 @@ fn dangle() -> Box&lt;u32> {
                 </section>
                 <section>
                     <section>
-                        <h1>Thread safety</h1>
+                        <h1>Concurrency</h1>
+                    </section>
+                    <section>
+                        <h2>Thread safety #1</h2>
                         <pre><code class="rust" data-trim contenteditable>
 use std::sync::mpsc::*;
 use std::thread::spawn;
@@ -488,6 +492,7 @@ let x = rx.recv();
                         </code></pre>
                     </section>
                     <section>
+                        <h2>Thread safety #2</h2>
                         <pre><code class="rust" data-trim contenteditable>
 use std::sync::mpsc::*;
 use std::thread::spawn;
@@ -503,6 +508,7 @@ let x = rx.recv();
                         </code></pre>
                     </section>
                     <section>
+                        <h2>Thread safety #3</h2>
                         <pre><code class="rust" data-trim contenteditable>
 use std::sync::mpsc::*;
 use std::thread::spawn;
@@ -517,6 +523,7 @@ let x = rx.recv();
                         </code></pre>
                     </section>
                     <section>
+                        <h2>Thread safety #4</h2>
                         <pre><code class="rust" data-trim contenteditable>
 use std::sync::mpsc::*;
 use std::thread::spawn;
@@ -537,17 +544,32 @@ let x = rx.recv();
                 <section>
                     <section>
                         <h1>More features</h1>
+                    </section>
+                    <section>
+                        <h2>Further topics #1</h2>
                         <ul>
-                            <li>General thread safety due to borrow checker</li>
-                            <li>Powerful zero cost abstractions</li>
-                            <li>Error handling via result types</li>
-                            <li>Associated types and constants</li>
-                            <li>Closures</li>
-                            <li><a href="https://crates.io" target"_blank">Crate ecosystem</a></li>
+                            <li class="fragment fade-up">General thread safety due to borrow checker</li>
+                            <li class="fragment fade-up">Powerful zero cost abstractions</li>
+                            <li class="fragment fade-up">Error handling via result types</li>
+                            <li class="fragment fade-up">Associated types and constants</li>
+                            <li class="fragment fade-up">Buddy traits, associated trait types, trait objects vs generics</li>
+                            <li class="fragment fade-up">Closures</li>
                         </ul>
                     </section>
                     <section>
-                        <h1>Resources</h1>
+                        <h2>Further topics #2</h2>
+                        <ul>
+                            <li class="fragment fade-up">Iterators</li>
+                            <li class="fragment fade-up">Futures</li>
+                            <li class="fragment fade-up">I/O Streams</li>
+                            <li class="fragment fade-up">Macros</li>
+                            <li class="fragment fade-up">Unsafe Code</li>
+                            <li class="fragment fade-up">Program Structure, Modules, Crates</li>
+                            <li class="fragment fade-up"><a href="https://crates.io" target"_blank">External crates</a></li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2>Resources</h2>
                         <ul>
                             <li><a href="http://doc.rust-lang.org/book">http://doc.rust-lang.org/book</a></li>
                             <li><a href="http://rustbyexample.com/">http://rustbyexample.com/</a></li>
@@ -555,12 +577,17 @@ let x = rx.recv();
                             <li><a href="http://users.rust-lang.org/">http://users.rust-lang.org/</a></li>
                             <li><a href="http://reddit.com/r/rust/">http://reddit.com/r/rust/</a></li>
                             <li><a href="https://blog.rust-lang.org/">https://blog.rust-lang.org/</a></li>
-                            <li><a href="http://www.oreilly.com/programming/free/why-rust.csp">Why Rust?</a></li>
+                            <li><a href="https://play.rust-lang.org/">https://play.rust-lang.org/</a></li>
                         </ul>
                     </section>
                     <section>
-                        <h1>Thank you!</h1>
+                        <p>Two good books, one free:</p>
+                        <img height="300px" class="plain" src="http://akamaicovers.oreilly.com/images/0636920040385/rc_cat.gif">
+                        <img height="300px" class="plain" src="http://covers.oreillystatic.com/images/0636920040446/cat.gif">
                     </section>
+                </section>
+                <section>
+                    <h1>Thank you!</h1>
                 </section>
             </div>
         </div>
