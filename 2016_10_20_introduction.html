@@ -1,0 +1,590 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>Rust Introduction</title>
+        <meta name="author" content="Sascha Grunert">
+
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/solarized.css">
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h1>Rust</h1>
+                    <h3>Fast, safe and productive - pick three</h3>
+                </section>
+                <section>
+                    <section>
+                        <h2>Common system programming problems:</h2>
+                        <ul>
+                            <li>Undefined behaviors</li>
+                            <li>Iterator invalidation</li>
+                            <li>Data races</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2>Undefined behaviors</h2>
+                        <pre><code class="c" data-trim contenteditable>
+int arr[4] = {0, 1, 2, 3};
+int *p = arr + 5; // undefined behavior
+                        </code></pre>
+                        <pre><code class="c" data-trim contenteditable>
+int k, i;
+for (i = 0; i < 10; i++) {
+    k = k + 1; // What is k?
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Iterator invalidation</h2>
+                        <pre><code class="c" data-trim contenteditable>
+vector&ltint> x = { 1, 2, 3 };
+int j = 0;
+for (auto it = x.begin(); it != x.end(); ++it) {
+    x.push_back(j); // Makes iterator invalid.
+    j++;
+    cout << j << " .. ";
+}
+                        </code></pre>
+                        Iterators are invalidated by some operations that modify a std::vector.
+                    </section>
+                    <section>
+                        <h2>Data races</h2>
+                        <pre><code class="c" data-trim contenteditable>
+if (x == 5) { // The "Check"
+
+   y = x * 2; // The "Act"
+
+   // If another thread changed x
+   // in between "if (x == 5)" and
+   // "y = x * 2" above, y will not be 
+   // equal to 10.
+}
+                        </code></pre>
+                    </section>
+                </section>
+                <section>
+                    <h2>Why is this a problem?</h2>
+                    <ul>
+                        <li>Runtine failures like segfaults are not recoverable.</li>
+                        <li>Extremely common source of security bugs.</li>
+                        <li>Existing solutions for safety are slow and usually require a garbage collection.</li>
+                        <li>Code Review for such corner cases slows down the development.</li>
+                    </ul>
+                </section>
+                <section>
+                    <img class="plain" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Rust_programming_language_black_logo.svg/480px-Rust_programming_language_black_logo.svg.png">
+                </section>
+                <section>
+                    <section>
+                        <h1>Some basics</h1>
+                    </section>
+                    <section>
+                        <h2>If, loops, functions</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+if a > 1 {
+    println!("{:?}", a);
+}
+
+let mut i: i32 = 0;
+
+loop {
+    if i > 10 { break; }
+    i += 1;
+    println!("{:?}", i);
+}
+
+fn multiply(x: i32, y: i32) -> i32 {
+    x * y
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Expression based language</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let b = 3i32;
+
+let a = if b > 1 {
+    let mut c = b - 5;
+    c = c * b;
+    c
+} else {
+    1i32
+};
+
+fn greater(a: i32, b: i32) -> i32 {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Pattern matching</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let number = 5u32;
+let size = match number {
+    0 => "none",
+    2 | 3 => "tiny",
+    4...7 => "small",
+    8...20 => "medium",
+    _ => "large"
+};
+
+match number {
+    2 | 8 | 9 => {
+      let mut c = 1;
+      c += number;
+      println!("The incremented number is {}", c);
+    },
+    _ => println!("Sorry! :(")
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Destructuring</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let pair = (4u32, 5u32);
+let (a, b) = pair;
+let (b, a) = (a, b);
+let smaller = match pair {
+    (x, y) if x &lt; y => x,
+    (_, y) => y
+};
+
+match pair {
+    (0, 0) => println!("Origin"),
+    (0, y) => println!("Y-axis, coordinate {}", y),
+    (x, 0) => println!("X-axis, coordinate {}", x),
+    (x, y) => {
+      let distance = ((x*x + y*y) as f32).sqrt();
+      println!("Point is ({}, {}), and {} units from origin",
+               x, y, distance);
+    }
+};
+                        </code></pre>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h1>Data types</h1>
+                    </section>
+                    <section>
+                        <h2>Structures</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+struct Point {
+    x: i32,
+    y: i32
+}
+
+let p = Point {x: 0, y: 0};
+println!("X coordinate is {}", p.x)
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Enums</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+enum Shape {
+    Circle(Point, u32),
+    Rectangle(Point, Point),
+}
+
+enum Option&lt;T> {
+    Some(T),
+    None,
+}
+
+let origin = Point {x: 0, y: 0};
+let circ = Shape::Circle(origin, 10);
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Extended pattern matching</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let perimeter = match shape {
+    Circle(_, r) => 2*pi*r,
+    Rectangle(p1, p2) => 2*abs(p2.x - p1.x) + 2*abs(p2.y - p1.y)
+}
+
+let perimeter = match shape {
+    Circle(_, r) => 2*pi*r,
+    Rectangle(Point {x: x1, y: y1}, Point {x: x2, y: y2}) =>
+      2*abs(x2 - x1) + 2*abs(y2 - y1)
+}
+
+match point {
+    Point {x: 2...6, y: -1...5} => println!("I like this point"),
+    _ => println!("I do not like this point"),
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Generics</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+enum Option&lt;T> {
+    Some(T),
+    None
+}
+
+fn maybe_sqrt(x: i32) -> Option&lt;u32> {
+    if x >= 0 {
+      Some(sqrt(x) as u32)
+    } else {
+      None
+    }
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Implementations</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+impl Point {
+    fn distance(&self) -> f32 { // point.distance()
+        ((self.x*self.x + self.y*self.y) as f32).sqrt()
+    }
+
+    fn random() -> Point { // Point::random()
+      Point {
+        x: 4, // Chosen by fair dice roll
+        y: 4,  // Guaranteed to be random
+      }
+    }
+}
+
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Traits</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+trait Pointy {
+    fn poke(&self, at: &str);
+
+    fn hello(&self) {
+        println!("Hello world");
+    }
+}
+
+impl Pointy for Point {
+    fn poke(&self, at: &str) {
+        println!("Poked {}", at);
+    }
+}
+
+fn poke_forever&lt;T>(pointy: T, at: &str) where T: Pointy {
+    loop {
+        pointy.poke(at)
+    }
+}
+                        </code></pre>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h1>Memory management</h1>
+                    </section>
+                    <section>
+                        <h2>Moves and copies</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let x = 5i8;
+let y = x;
+println!("x is {:?}", x); // y was copied from x
+
+let x = vec![1u8, 2u8, 3u8];
+let y = x; // the vector was "moved"
+println!("y is {:?}", y);
+// Will not work, the vector is "owned" by y
+// println!("x is {}", x)
+
+fn abc(x: Vec&lt;u8>) {
+    // do something
+}
+let vec = vec![1u8, 2u8, 3u8];
+abc(vec); // 'abc' consumes vec
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Borrowing</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let x = vec![1, 2, 3];
+let y = &x; // the vector was "borrowed"
+let c = x.clone(); // Explicit copy
+println!("x is {:?}", x);
+println!("y is {:?}", *y);
+
+fn abc(x: &Vec&lt;u8>) {
+    // do something
+}
+
+let vec = vec![1u8,2u8,3u8];
+abc(&vec); // Passes a borrowed reference
+// Still can use vec here
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Borrowing & mutability</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let mut x = vec![1u8, 2u8, 3u8];
+{
+    let y = &x; // the pointer was "borrowed"
+    // Not allowed, x is currently borrowed and cannot be mutated
+    // x.push(1);
+    // Not allowed, y is not a mutable reference
+    // y.push(1);
+}
+x.push(1); // The borrow was "returned", we can mutate now
+
+let mut x = vec![1u8, 2u8, 3u8];
+{
+    let y = &mut x; // the pointer was "borrowed", mutably
+    // Still not allowed, x is currently borrowed and cannot be mutated
+    // x.push(1);
+    // also not allowed, y is mutating this
+    // println!("x is {}", x) 
+    // Allowed, y is a mutable reference
+    y.push(1); 
+}
+x.push(1) // The borrow was "returned", we can mutate now
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Ownership and implementations</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+struct Polygon {points: Vec&ltPoint>};
+impl Point {
+    // This one moves
+    fn draw_move(self) {
+        // ...
+    }
+
+    // This one borrows
+    fn draw_borrow(&self) {
+        // ...
+        // after calling p.draw_borrow() I can still use p
+    }
+
+    // This one borrows mutably
+    fn draw_borrow_mut(&mut self) {
+        // ...
+        // I can mutate self here
+    }
+}
+
+// (*polygon).draw_borrow() dereference not necessary
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>The heap</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let mut x = Box::new(1); // On the heap
+*x = 2;
+
+// Type Box&lt;u32>
+// Also gets moved, not copied
+
+fn abc() {
+    let x = Box::new(1); // malloc() happened
+    // do stuff with x or *x
+    // free() happened
+}
+
+fn def() -> Box&lt;u32>{
+    let x = Box::new(1); // malloc() happened
+    // do stuff with x or *x
+    x // x returned to outer owner  
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Destructuring and binding by reference</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let pair = (Box::new(1), Box::new(2));
+let (a, b) = pair;
+// The boxes were moved out of `pair`, cannot use it anymore
+
+let pair = (Box::new(1), Box::new(2));
+{
+    let (ref a, ref b) = pair;
+    // a, b are borrowed references now, so everything is fine
+    // use `ref mut` for mutable references
+}
+
+// Works in match statements too!
+let maybe_heap = Some(Box::new(1));
+match maybe_heap {
+    Some(ref x) => println!("{}", x),
+    None => println!("No variable")
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Strings and arrays</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+let mut fixed_len_vec = [1,2,3]; // type [u32, 3]
+fixed_len_vec[1] = 2;
+
+let mut buffer = vec![1,2,3]; // type Vec&lt;u32>
+buffer.push(20); // Now it is of length 4!
+let slice = &buffer[0..2]; // type &[u32]
+let slice = &[1,2,3]; // Same
+
+let owned = "Manish".to_string(); // type String
+let static_slice = "Manish"; // type `&'static str`
+let slice = &owned[0..3]; // type &str
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Some unsafe Rust</h2>
+                        <pre><code class="rust" data-trim contenteditable>
+extern crate core;
+use std::{mem, ptr};
+
+fn main() {
+    let y = *dangle() + 1;
+    // Segfault.
+}
+
+fn dangle() -> Box&lt;u32> {
+    unsafe {
+        // Null pointer
+        let mut p: *mut int = ptr::null_mut();
+        // Heap memory, will be freed at the end of this function
+        let b = Box::new(1u32);
+        ptr::write(p, *b);
+        mem::transmute(p) // Converts to box and returns
+    }
+}
+                        </code></pre>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h1>Thread safety</h1>
+                        <pre><code class="rust" data-trim contenteditable>
+use std::sync::mpsc::*;
+use std::thread::spawn;
+
+let (tx, rx) = channel();
+
+spawn(move || {
+    tx.send(1); // works!
+});
+
+let x = rx.recv();
+                        </code></pre>
+                    </section>
+                    <section>
+                        <pre><code class="rust" data-trim contenteditable>
+use std::sync::mpsc::*;
+use std::thread::spawn;
+
+let (tx, rx) = channel();
+
+spawn(move || {
+    let x = Box::new(1);
+    tx.send(x); // works!
+});
+
+let x = rx.recv();
+                        </code></pre>
+                    </section>
+                    <section>
+                        <pre><code class="rust" data-trim contenteditable>
+use std::sync::mpsc::*;
+use std::thread::spawn;
+let (tx, rx) = channel();
+
+spawn(move || {
+    let x = Box::new(1);
+    tx.send(&x); // x does not live long enough
+});
+
+let x = rx.recv();
+                        </code></pre>
+                    </section>
+                    <section>
+                        <pre><code class="rust" data-trim contenteditable>
+use std::sync::mpsc::*;
+use std::thread::spawn;
+use std::rc::Rc;
+// use std::sync::Arc;
+
+let (tx, rx) = channel();
+
+spawn(move || {
+    let x = Rc::new(1); // smart pointer
+    tx.send(x.clone()); // cannot send between thread safely
+});
+
+let x = rx.recv();
+                        </code></pre>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h1>More features</h1>
+                        <ul>
+                            <li>General thread safety due to borrow checker</li>
+                            <li>Powerful zero cost abstractions</li>
+                            <li>Error handling via result types</li>
+                            <li>Associated types and constants</li>
+                            <li>Closures</li>
+                            <li><a href="https://crates.io" target"_blank">Crate ecosystem</a></li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h1>Resources</h1>
+                        <ul>
+                            <li><a href="http://doc.rust-lang.org/book">http://doc.rust-lang.org/book</a></li>
+                            <li><a href="http://rustbyexample.com/">http://rustbyexample.com/</a></li>
+                            <li><a href="http://doc.rust-lang.org/">http://doc.rust-lang.org/</a></li>
+                            <li><a href="http://users.rust-lang.org/">http://users.rust-lang.org/</a></li>
+                            <li><a href="http://reddit.com/r/rust/">http://reddit.com/r/rust/</a></li>
+                            <li><a href="https://blog.rust-lang.org/">https://blog.rust-lang.org/</a></li>
+                            <li><a href="http://www.oreilly.com/programming/free/why-rust.csp">Why Rust?</a></li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h1>Thank you!</h1>
+                    </section>
+                </section>
+            </div>
+        </div>
+
+        <script src="lib/js/head.min.js"></script>
+        <script src="js/reveal.js"></script>
+
+        <script>
+            // More info https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                history: true,
+                controls: true,
+                center: true,
+                progress: true,
+
+                // More info https://github.com/hakimel/reveal.js#dependencies
+                dependencies: [
+                    { src: 'plugin/markdown/marked.js' },
+                    { src: 'plugin/markdown/markdown.js' },
+                    { src: 'plugin/notes/notes.js', async: true },
+                    { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+                    { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+                ]
+            });
+        </script>
+    </body>
+</html>
