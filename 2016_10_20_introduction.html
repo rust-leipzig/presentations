@@ -553,13 +553,15 @@ let x = rx.recv();
                             <li class="fragment fade-up">Error handling via result types</li>
                             <li class="fragment fade-up">Associated types and constants</li>
                             <li class="fragment fade-up">Buddy traits, associated trait types, trait objects vs generics</li>
-                            <li class="fragment fade-up">Closures</li>
+                            <li class="fragment fade-up">Error Handling</li>
+                            <li class="fragment fade-up">Lifetimes</li>
                         </ul>
                     </section>
                     <section>
                         <h2>Further topics #2</h2>
                         <ul>
                             <li class="fragment fade-up">Iterators</li>
+                            <li class="fragment fade-up">Closures</li>
                             <li class="fragment fade-up">Futures</li>
                             <li class="fragment fade-up">I/O Streams</li>
                             <li class="fragment fade-up">Macros</li>
@@ -574,11 +576,15 @@ let x = rx.recv();
                             <li><a href="http://doc.rust-lang.org/book">http://doc.rust-lang.org/book</a></li>
                             <li><a href="http://rustbyexample.com/">http://rustbyexample.com/</a></li>
                             <li><a href="http://doc.rust-lang.org/">http://doc.rust-lang.org/</a></li>
-                            <li><a href="http://users.rust-lang.org/">http://users.rust-lang.org/</a></li>
-                            <li><a href="http://reddit.com/r/rust/">http://reddit.com/r/rust/</a></li>
                             <li><a href="https://blog.rust-lang.org/">https://blog.rust-lang.org/</a></li>
                             <li><a href="https://play.rust-lang.org/">https://play.rust-lang.org/</a></li>
+                            <li><a href="http://users.rust-lang.org/">http://users.rust-lang.org/</a></li>
+                            <li><a href="https://www.rust-lang.org/en-US/community.html">https://www.rust-lang.org/en-US/community.html</a></li>
+                            <li><a href="http://reddit.com/r/rust/">http://reddit.com/r/rust/</a></li>
                         </ul>
+                    </section>
+                    <section>
+                            <a href="https://rust-leipzig.github.io/" target="_blank">We have a blog.</a>
                     </section>
                     <section>
                         <p>Two good books, one free:</p>
@@ -598,10 +604,12 @@ let x = rx.recv();
         <script>
             // More info https://github.com/hakimel/reveal.js#configuration
             Reveal.initialize({
-                history: true,
-                controls: true,
+                backgroundTransition: 'zoom',
                 center: true,
+                controls: true,
+                history: true,
                 progress: true,
+                transition: 'zoom',
 
                 // More info https://github.com/hakimel/reveal.js#dependencies
                 dependencies: [
