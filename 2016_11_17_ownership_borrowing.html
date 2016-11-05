@@ -22,13 +22,598 @@
     <body>
         <div class="reveal">
             <div class="slides">
-                <section>
-                    <h1>Rust</h1>
-                    <h3>Ownership and Borrowing</h3>
+                <section data-markdown>
+                    <script type="text/template">
+                    # Rust
+                    ## Ownership and Borrowing
                     <small>Second user group Meetup in Leipzig (2016-11-17)</small>
+                    </script>
                 </section>
                 <section>
-                    <h1>Thank you!</h1>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Ownership
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Essentials for a safe language:
+
+                        - You decide the lifetime of each value in your program
+                        - Rust frees memory and other resources belonging to a value promptly
+                        - Your program will never use a pointer to an object after it has been freed
+                        - Rust restricts your program how to use poiners at compile time
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Ownership for variables
+
+                        - Every value has a clear owner
+                        - If the "owner" gets "dropped", the value is also gone
+
+                        ```rust
+                        fn my_print() {
+                            let mut vector = vec![1, 1, 1];  // allocated memory
+                            for i in 1..10 {
+                                let next = vector[i-1] + vector[i+2];
+                                vector.push(next);
+                            }
+                            println!("{:?}", vector);
+                        } // value dropped here
+                        ```
+
+                        `Vector<T>` is mainly a fat pointer (pointer, capacity,
+                        length) on the stack and the heap memory.
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Ownership for other types
+
+                        - structs own their members
+                        - tuples, arrays, vectors own their elements
+                        - every value has a single owner
+                        - single values may own other values
+
+                        ```rust
+                        struct Person {
+                            name: String,
+                            age: u8,
+                        }
+                        let mut people = Vec::new();
+                        people.push(
+                             Person {
+                                name: "Tom".to_string(),
+                                age: 28,
+                            }
+                        );
+                        people.push(
+                             Person {
+                                name: "Max".to_string(),
+                                age: 33,
+                            }
+                        );
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Ownership restrictions
+
+                        The ownership system will result in "trees", not flexible "graphs".
+
+                        - move values from one owner to another (rearrange the tree)
+                        - multiple owners possible within certain data types (Arc, Rc)
+                        - borrow a reference (non owning pointers)
+                        </script>
+                    </section>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Moves
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Basics
+
+                        - most operations move a value instead of copying
+                        - results in low memory and processing time
+                        - old owners after move uninitialized
+
+                        ```rust
+                        let v = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+                        let a = v;
+                        let b = v; // error: use of moved value
+                        ```
+
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Drop
+
+                        ```rust
+                        let mut s = "Test".to_string();
+                        s = "Example".to_string(); // value "Test" dropped here
+                        ```
+
+                        ```rust
+                        let mut s = "Test".to_string();
+                        let t = s;
+                        s = "Example".to_string(); // nothing dropped here
+                        ```
+
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Move example
+
+                        ```rust
+                        struct Person {
+                            name: String,
+                            age: u8,
+                        }
+                        let mut people = Vec::new(); // moves ownership to "people"
+                        people.push(
+                             Person {
+                                name: "Tom".to_string(), // moves ownership, returns a String
+                                age: 28,
+                            } // Structure takes ownership of the String and u8
+                        );
+                        people.push(
+                             Person {
+                                name: "Max".to_string(),
+                                age: 33,
+                            }
+                        ); // Vector takes ownership of the person and its owners
+                        ```
+
+                        - machine code optimized to be stored "where it belongs"
+                        - moves just copy three words (a fat pointer)
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Control flow
+
+                        ```rust
+                        let x = vec![1, 2, 3];
+                        if condition {
+                            my_func(x); // okay, to move from x here
+                        } else {
+                            another_func(x); // okay to also move from x here
+                        }
+                        test_func(x); // bad: x is uninitialized here
+                        ```
+
+                        ```rust
+                        let x = vec![1, 2, 3];
+                        loop {
+                            my_func(x); // error: x is uninitialized after the first iteration
+                            // x = get_a_vector(); // Solution: get a fresh value
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Indexed content
+
+                        ```rust
+                        // Build a vector of the strings '1' to '5'
+                        let mut v = Vec::new();
+                        for i in 1..6 {
+                            v.push(i.to_string());
+                        }
+                        let third = v[2]; // error: cannot move out of indexed content
+                        let fifth = v.pop().unwrap(); // Works if unwrap(); succeeds
+                        // Removes the 2nd element and return it,
+                        // replacing it with the last element.
+                        let third = v.swap_remove(2);
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Copy Types
+
+                        - certain types implement the copy trait
+                            - integer and floating-point numeric types
+                            - char and bool types
+                            - tuple or fixed-size array of Copy types is itself a Copy type
+                        - self defined types can also be copy:
+
+                        ```rust
+                        #[derive(Copy, Clone)]
+                        struct Label { number: u32 }
+                        // Works
+                        ```
+                        ```rust
+                        #[derive(Copy, Clone)]
+                        struct Label { name: String }
+                        // Does not work since String does not implement Copy
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Shared Ownership
+
+                        - most values have unique owners in Rust
+                        - Arc/Rc allows to live values as long as everybody is done using it (smart pointer)
+                            - Arc: Atomic Refernce Count (can be shared safely between threads)
+                            - Rc: Reference Count (faster, not thread safe)
+
+                        ```rust
+                        use std::rc::Rc;
+                        let s  = Rc::new("Test".to_string());
+
+                        // Just creates another pointer to the data in the heap:
+                        let t  = s.clone(); // increment reference count
+                        let u  = s.clone(); // increment reference count
+                        ```
+                        Rust drops the String if the last instance is dropped
+                        </script>
+                    </section>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Borrowing
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Basics
+
+                        - "References" are non owning pointer types
+                            - must never outlive their referents
+                            - are never `NULL`
+                        - Creating new references is called "Borrowing"
+                        - two reference types available:
+                            - _Shared Reference_ (Copy): multiple reader
+                            - _Mutable Reference_  (not Copy): single writer
+
+                        ```rust
+                        &T // shared
+                        &mut T // mutable
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Consuming data
+
+                        ```rust
+                        use std::collections::HashMap;
+
+                        // Create a simple HashMap
+                        let mut map :HashMap<String, u8> = HashMap::new();
+                        map.insert("Foo".to_owned(), 5);
+                        map.insert("Bar".to_owned(), 15);
+
+                        // Iterate threw the map
+                        for (name, number) in map {
+                            println!("{} {}", name, number);
+                        }
+
+                        // does not work any more
+                        // the hashmap is already consumed
+                        let foo = map.get("Foo");
+                        println!("{:?}", foo);
+                        ```
+
+
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Borrowing data
+
+                        ```rust
+                        use std::collections::HashMap;
+
+                        // Create a simple HashMap
+                        let mut map :HashMap<String, u8> = HashMap::new();
+                        map.insert("Foo".to_owned(), 5);
+                        map.insert("Bar".to_owned(), 15);
+
+                        // Iterate threw the borrowed HashMap
+                        for (name, number) in &map {
+                            println!("{} {}", name, number);
+                        }
+
+                        // Works now
+                        let foo = map.get("Foo");
+                        println!("{:?}", foo); // prints "Some(5)"
+                        ```
+
+                        ```rust
+                        // Standard vector operations:
+                        fn sort(&mut self); // Takes a mutable reference, call vector.sort();
+                        fn get(&self, index: usize) -> Option<T>; // Takes just a reference
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Implicit dereferencing
+
+                        References are close to C/C++ pointers:
+                        ```rust
+                        let x = 10;
+                        let y = &x;
+                        assert!(*y == 10);
+                        ```
+
+                        ```rust
+                        let mut y = 10;
+                        let x = &mut y;
+                        *x *= 10;
+                        assert!(*x == 100);
+                        ```
+
+                        Dot `.` operator follows references automatically:
+                        ```rust
+                        let point = (100, 200);
+                        let r = &point;
+                        assert_eq!(r.0, 100); // no (*r).0 needed
+                        ```
+
+                        ```rust
+                        struct Point { x: i32, y: i32 }
+                        let p = Point { x: 100, y: 200 };
+                        let r1 :&Point = &p;
+                        let r2 :&&Point = &r1;
+                        let r3 :&&&Point = &r2;
+                        assert_eq!(r3.y, 200);
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Fat references
+
+                        Some references are fat pointers:
+                        - references to Vec or slice of an array: `&[T]`
+                        - references to String: `&str`
+
+                        References to expressions are possible as well:
+                        ```rust
+                        fn some_function() -> usize { 10usize }
+                        let r = &some_function();
+                        assert_eq!(r + &10, 20);
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Scope of borrowing
+
+                        ```rust
+                        let y;
+                        {
+                            let x = 1;
+                            y = &x;
+                        }
+                        assert_eq!(*y, 1);  // error: x does not live long enough
+                        ```
+
+                        - Rust assigns a lifetime to every reference
+                        - Lifetime will be checked at compilation
+
+                        Rust tries to infer the correct lifetime for you.
+                        </script>
+                    </section>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Lifetimes
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Basics
+
+                        - start with a `'`, e.g. 'a or 'static
+                        - 'static is the largest possible lifetime (must be initialized)
+
+                        Functions can take lifetime parameters to specify variable lifetimes:
+                        ```rust
+                        fn f<'a>(p: &'a i32) { ... }
+                        ```
+
+                        Example, does this work?
+                        ```rust
+                        fn f(p: &'static i32) { ... }
+
+                        let x = 10;
+                        f(&x);
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## References in function arguments
+
+                        ```rust
+                        // Usually rust infers this
+                        fn smallest<'a>(v: &'a [i32]) -> &'a i32 {
+                            let mut s = &v[0];
+                            for r in &v[1..] {
+                                if *r < *s { s = r; }
+                            }
+                            s
+                        }
+                        ```
+
+                        ```rust
+                        let s;
+                        {
+                            let items = [5, 3, 2, 0, 1, 6, 9];
+                            s = smallest(&items);
+                        }
+                        assert_eq!(*s, 0); // error: items does not live long enough
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## References in structures
+
+                        - references in structures needs explicit lifetime parameters
+
+                        ```rust
+                        struct Items<'a> {
+                            count: &'a i32
+                        }
+                        ```
+
+                        ```rust
+                        let storage;
+                        {
+                            let x = 5;
+                            storage = Items { count: &x };
+                        }
+                        assert_eq!(*storage.count, 5); // error: x does not live long enough
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Distinct lifetimes #1
+
+                        ```rust
+                        struct Point<'a> {
+                            x: &'a i32,
+                            y: &'a i32
+                        }
+                        ```
+                        ```rust
+                        let x = 5;
+                        let r;
+                        {
+                            let y = 10;
+                            {
+                                let point = Point { x: &x, y: &y };
+                                r = point.x;
+                            }
+                        }
+                        ```
+
+                        Will it work?
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Distinct lifetimes #2
+
+                        The constraints are impossible to satisfy: no lifetime
+                        is shorter than y's scope, but longer than r's.
+
+                        Solution:
+                        ```rust
+                        struct Point<'a, 'b> {
+                            x: &'a i32,
+                            y: &'b i32
+                        }
+                        ```
+                        ```rust
+                        let x = 5;
+                        let r;
+                        {
+                            let y = 10;
+                            {
+                                let point = Point { x: &x, y: &y };
+                                r = point.x;
+                            }
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Share or Mutate?
+
+                        Shared references makes the variable read only:
+                        ```rust
+                        let v = vec![1, 2, 3];
+                        let r = &v;
+                        let move = v; // moves
+                        println!("{}", r[0]);
+                        // error: cannot move out of `v` because it is borrowed
+                        ```
+
+                        Solution:
+                        ```rust
+                        let v = vec![1, 2, 3];
+                        {
+                            let r = &v;
+                            println!("{}", r[0]); // Works now
+                        }
+                        let move = v;
+                        ```
+                        This makes iterator invalidation impossible!
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        Remember the Ownership tree:
+                        <br>
+                        ## Shared access is read only access
+                        - Multiple readers are possible
+
+                        <br>
+
+                        ## Mutable access is exclusive
+                        - No other usable path to this referent possible
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Examples
+
+                        ```rust
+                        let mut x = 10;
+                        let r1 = &x;
+                        let r2 = &x; // multiple shared borrows
+                        x += 10; // error: x already borrowed
+                        let m = &mut x; // error: cannot borrow `x` as mutable because it is
+                                        // also borrowed as immutable
+                        ```
+                        ```rust
+                        let mut y = 20;
+                        let m1 = &mut y;
+                        let m2 = &mut y; // error: cannot borrow as mutable more than once
+                        let z = y; // error: cannot use `y` because it was mutably borrowed
+                        ```
+                        ```rust
+                        let mut w = (1, 2);
+                        let r = &w;
+                        let r0 = &r.0; // okay: re borrowing shared as shared
+                        let m1 = &mut r.1; // error: can't re borrow shared as mutable
+                        ```
+                        ```rust
+                        let mut v = (1, 2);
+                        let m = &mut v;
+                        let m0 = &mut m.0; // okay: re borrowing mutable from mutable
+                        *m0 = 42;
+                        let r1 = &mut m.1; // okay: re borrowing shared from mutable,
+                                           // and doesn't overlap with m0
+                        v.1; // error: access through other paths still forbidden
+                        ```
+                        </script>
+                    </section>
+                </section>
+                <section data-markdown>
+                    <script type="text/template">
+                    # Thank you!
+                    </script>
                 </section>
             </div>
         </div>
