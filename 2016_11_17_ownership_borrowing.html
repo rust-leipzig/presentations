@@ -146,6 +146,21 @@
                         s = "Example".to_string(); // nothing dropped here
                         ```
 
+                        <br>
+                        Drop trait gives flexibility:
+                        ```rust
+                        struct HasDrop;
+
+                        impl Drop for HasDrop {
+                            fn drop(&mut self) {
+                                println!("Dropping!");
+                            }
+                        }
+
+                        fn main() {
+                            let _x = HasDrop;
+                        } // "Dropping!"
+                        ```
                         </script>
                     </section>
                     <section data-markdown>
@@ -157,6 +172,7 @@
                             name: String,
                             age: u8,
                         }
+
                         let mut people = Vec::new(); // moves ownership to "people"
                         people.push(
                              Person {
@@ -182,11 +198,13 @@
 
                         ```rust
                         let x = vec![1, 2, 3];
+
                         if condition {
                             my_func(x); // okay, to move from x here
                         } else {
                             another_func(x); // okay to also move from x here
                         }
+
                         test_func(x); // bad: x is uninitialized here
                         ```
 
@@ -209,8 +227,10 @@
                         for i in 1..6 {
                             v.push(i.to_string());
                         }
+
                         let third = v[2]; // error: cannot move out of indexed content
                         let fifth = v.pop().unwrap(); // Works if unwrap(); succeeds
+
                         // Removes the 2nd element and return it,
                         // replacing it with the last element.
                         let third = v.swap_remove(2);
@@ -221,7 +241,7 @@
                         <script type="text/template">
                         ## Copy Types
 
-                        - certain types implement the copy trait
+                        - certain types implement the Copy (marker) trait
                             - integer and floating-point numeric types
                             - char and bool types
                             - tuple or fixed-size array of Copy types is itself a Copy type
@@ -276,12 +296,13 @@
                         - Creating new references is called "Borrowing"
                         - two reference types available:
                             - _Shared Reference_ (Copy): multiple reader
+                            ```rust
+                            &T // shared, like a pointer to const data
+                            ```
                             - _Mutable Reference_  (not Copy): single writer
-
-                        ```rust
-                        &T // shared
-                        &mut T // mutable
-                        ```
+                            ```rust
+                            &mut T // mutable, like a pointer
+                            ```
                         </script>
                     </section>
                     <section data-markdown>
@@ -296,7 +317,7 @@
                         map.insert("Foo".to_owned(), 5);
                         map.insert("Bar".to_owned(), 15);
 
-                        // Iterate threw the map
+                        // Iterate over the map
                         for (name, number) in map {
                             println!("{} {}", name, number);
                         }
@@ -304,10 +325,8 @@
                         // does not work any more
                         // the hashmap is already consumed
                         let foo = map.get("Foo");
-                        println!("{:?}", foo);
+                        //        ^^^ Value used after move
                         ```
-
-
                         </script>
                     </section>
                     <section data-markdown>
@@ -322,7 +341,7 @@
                         map.insert("Foo".to_owned(), 5);
                         map.insert("Bar".to_owned(), 15);
 
-                        // Iterate threw the borrowed HashMap
+                        // Iterate over the map
                         for (name, number) in &map {
                             println!("{} {}", name, number);
                         }
