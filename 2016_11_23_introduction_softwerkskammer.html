@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>Rust Introduction</title>
+        <meta name="author" content="Sascha Grunert">
+
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/solarized.css">
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h1>Rust</h1>
+                    <h3>Fast, safe and productive — pick three</h3>
+                    <small>An introduction to the Softwerkskammer Leipzig (2017-11-23)</small>
+                </section>
+                <section>
+                    <section>
+                        <h2>Common system programming problems:</h2>
+                        <ul>
+                            <li>Undefined behaviors</li>
+                            <li>Iterator invalidation</li>
+                            <li>Data races</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h2>Undefined behaviors</h2>
+                        <pre><code class="c" data-trim contenteditable>
+int arr[4] = {0, 1, 2, 3};
+int *p = arr + 5; // undefined behavior
+                        </code></pre>
+                        <pre><code class="c" data-trim contenteditable>
+int k, i;
+for (i = 0; i < 10; i++) {
+    k = k + 1; // What is k?
+}
+                        </code></pre>
+                        <pre><code class="c" data-trim contenteditable>
+char * 
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Iterator invalidation</h2>
+                        <pre><code class="c" data-trim contenteditable>
+vector&ltint> x = { 1, 2, 3 };
+int j = 0;
+for (auto it = x.begin(); it != x.end(); ++it) {
+    x.push_back(j); // Makes iterator invalid.
+    j++;
+    cout << j << " .. ";
+}
+                        </code></pre>
+                        Iterators are invalidated by some operations that modify a std::vector.
+                    </section>
+                    <section>
+                        <h2>Data races</h2>
+                        <pre><code class="c" data-trim contenteditable>
+if (x == 5) { // The "Check"
+
+   y = x * 2; // The "Act"
+
+   // If another thread changed x
+   // in between "if (x == 5)" and
+   // "y = x * 2" above, y will not be 
+   // equal to 10.
+}
+                        </code></pre>
+                    </section>
+                    <section>
+                        <h2>Why is this a problem?</h2>
+                        <ul>
+                            <li>Runtime failures like segfaults are not recoverable.</li>
+                            <li>Extremely common source of security bugs.</li>
+                            <li>Existing solutions for safety are slow and usually require a garbage collection.</li>
+                            <li>Non type safety leads into common pitfalls (void pointers, wrong casts).</li>
+                            <li>Code Review for such corner cases slows down the development.</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <img class="plain" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Rust_programming_language_black_logo.svg/480px-Rust_programming_language_black_logo.svg.png">
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h1>Features</h1>
+                    </section>
+                    <section>
+                        <ul>
+                            <li>General thread safety due to borrow checker</li>
+                            <li class="fragment fade-up">Powerful zero cost abstractions without garbage collection</li>
+                            <li class="fragment fade-up">Full featured Error handling</li>
+                            <li class="fragment fade-up">Lifetime and Ownership (memory safety)</li>
+                            <li class="fragment fade-up">Pattern matching</li>
+                            <li class="fragment fade-up">Traits for behavioral description</li>
+                            <li class="fragment fade-up">Modern library documentation</li>
+                        </ul>
+                    </section>
+                    <section>
+                        <ul>
+                            <li>Highly optimized iterators</li>
+                            <li class="fragment fade-up">Closures</li>
+                            <li class="fragment fade-up">Futures</li>
+                            <li class="fragment fade-up">I/O Streams</li>
+                            <li class="fragment fade-up">Powerful macros</li>
+                            <li class="fragment fade-up">efficient C bindings</li>
+                            <li class="fragment fade-up">Program Structure, Modules, Crates</li>
+                            <li class="fragment fade-up"><a href="https://crates.io" target"_blank">External crates</a></li>
+                        </ul>
+                    </section>
+                    <section>
+                        <h1>Demo</h1>
+                    </section>
+                    <section>
+                        <h2>Resources</h2>
+                        <ul>
+                            <li><a href="http://doc.rust-lang.org/book">http://doc.rust-lang.org/book</a></li>
+                            <li><a href="http://rustbyexample.com/">http://rustbyexample.com/</a></li>
+                            <li><a href="http://doc.rust-lang.org/">http://doc.rust-lang.org/</a></li>
+                            <li><a href="https://blog.rust-lang.org/">https://blog.rust-lang.org/</a></li>
+                            <li><a href="https://play.rust-lang.org/">https://play.rust-lang.org/</a></li>
+                            <li><a href="http://users.rust-lang.org/">http://users.rust-lang.org/</a></li>
+                            <li><a href="https://www.rust-lang.org/en-US/community.html">https://www.rust-lang.org/en-US/community.html</a></li>
+                            <li><a href="http://reddit.com/r/rust/">http://reddit.com/r/rust/</a></li>
+                        </ul>
+                    </section>
+                    <section>
+                            <a href="https://rust-leipzig.github.io/" target="_blank">We have a blog.</a>
+                    </section>
+                    <section>
+                        <p>Two good books, one free:</p>
+                        <img height="300px" class="plain" src="http://akamaicovers.oreilly.com/images/0636920040385/rc_cat.gif">
+                        <img height="300px" class="plain" src="http://covers.oreillystatic.com/images/0636920040446/cat.gif">
+                    </section>
+                </section>
+                <section>
+                    <h1>Thank you!</h1>
+                </section>
+            </div>
+        </div>
+
+        <script src="lib/js/head.min.js"></script>
+        <script src="js/reveal.js"></script>
+
+        <script>
+            // More info https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                backgroundTransition: 'zoom',
+                center: true,
+                controls: true,
+                history: true,
+                progress: true,
+                transition: 'zoom',
+
+                // More info https://github.com/hakimel/reveal.js#dependencies
+                dependencies: [
+                    { src: 'plugin/markdown/marked.js' },
+                    { src: 'plugin/markdown/markdown.js' },
+                    { src: 'plugin/notes/notes.js', async: true },
+                    { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+                    { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+                ]
+            });
+        </script>
+    </body>
+</html>
