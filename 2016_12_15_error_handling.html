@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-        <title>Rust Introduction</title>
+        <title>Rust - Error Handling</title>
         <meta name="author" content="Sascha Grunert">
 
         <link rel="stylesheet" href="css/reveal.css">
@@ -28,6 +28,342 @@
                     ## Error handling
                     <small>Third user group Meetup in Leipzig (2016-12-15)</small>
                     </script>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Basics
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Panic
+                        - case analysis to determine whether a computation was successful or not
+                        - one way could be to use `panic`, which will unwind the current task
+
+                        ```rust
+                        // Guess a number between 1 and 10.
+                        // If it matches the number we had
+                        // in mind, return true. Else, return false.
+                        fn guess(n: i32) -> bool {
+                            if n < 1 || n > 10 {
+                                panic!("Invalid number: {}", n);
+                            }
+                            n == 5
+                        }
+
+                        fn main() {
+                            guess(11);
+                        }
+                        ```
+                        ```bash
+                        thread 'main' panicked at 'Invalid number: 11'
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Unwrapping
+                        _Give me the result of the computation, and if there was an error, panic and stop the program._
+                        ```rust
+                        use std::env;
+
+                        fn main() {
+                            let mut argv = env::args();
+                            let arg: String = argv.nth(1).unwrap(); // error 1
+                            let n: i32 = arg.parse().unwrap(); // error 2
+                            println!("{}", 2 * n);
+                        }
+                        ```
+                        - mostly used by the `Option` and `Result` types
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Option type
+                        - express the possibility of absence
+                        ```rust
+                        enum Option<T> {
+                            None,
+                            Some(T),
+                        }
+                        ```
+                        ```rust
+                        // Searches `haystack` for the Unicode
+                        // character `needle`. If one is found,
+                        // the byte offset of the character is
+                        // returned. Otherwise, `None` is returned.
+                        fn find(haystack: &str, needle: char) -> Option<usize> {
+                            for (offset, c) in haystack.char_indices() {
+                                if c == needle {
+                                    return Some(offset);
+                                }
+                            }
+                            None
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Option type
+                        Supported pattern matching:
+                        ```rust
+                        fn main() {
+                            let file_name = "foobar.rs";
+                            match find(file_name, '.') {
+                                None => println!("No file extension found."),
+                                Some(i) => println!("File extension: {}", &file_name[i+1..]),
+                            }
+                        }
+                        ```
+                        Unwrapping:
+                        ```rust
+                        impl<T> Option<T> {
+                            fn unwrap(self) -> T {
+                                match self {
+                                    Option::Some(val) => val,
+                                    Option::None => panic!("called `Option::unwrap()` on a `None` value"),
+                                }
+                            }
+                        }
+                        ```
+                        [Composing option types together is possible as well.](https://doc.rust-lang.org/std/option/enum.Option.html)
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Result type
+                        - _richer_ version of an Option
+                        - expresses the possibility of _error_
+
+                        ```rust
+                        enum Result<T, E> {
+                            Ok(T),
+                            Err(E),
+                        }
+                        ```
+                        ```rust
+                        type Option<T> = Result<T, ()>;
+                        ```
+                        ```rust
+                        impl<T, E: ::std::fmt::Debug> Result<T, E> {
+                            fn unwrap(self) -> T {
+                                match self {
+                                    Result::Ok(val) => val,
+                                    Result::Err(err) => panic!("{}", err),
+                                }
+                            }
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Result type
+                        Parsing integer example:
+                        ```rust
+                        impl str {
+                            fn parse<F: FromStr>(&self) -> Result<F, F::Err>;
+                        }
+                        ```
+                        ```rust
+                        fn double_number(number_str: &str) -> i32 {
+                            2 * number_str.parse::<i32>().unwrap()
+                        }
+
+                        fn main() {
+                            let n: i32 = double_number("10");
+                            assert_eq!(n, 20);
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Result type
+                        Example with real error handling:
+                        ```rust
+                        use std::num::ParseIntError;
+
+                        fn double_number(number_str: &str) -> Result<i32, ParseIntError> {
+                            number_str.parse::<i32>().map(|n| 2 * n)
+                        }
+
+                        fn main() {
+                            match double_number("10") {
+                                Ok(n) => assert_eq!(n, 20),
+                                Err(err) => println!("Error: {:?}", err),
+                            }
+                        }
+                        ```
+                        Type aliasing could make code a bit cleaner:
+                        ```rust
+                        use std::num::ParseIntError;
+                        use std::result;
+
+                        type Result<T> = result::Result<T, ParseIntError>;
+
+                        fn double_number(number_str: &str) -> Result<i32> {
+                            unimplemented!();
+                        }
+                        ```
+                        [Converting and composing Option and Result possible](https://doc.rust-lang.org/std/option/enum.Option.html)
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Early returns
+                        `?` Operator will help to keep code compact:
+
+                        ```rust
+                        fn log_result(&self, record: &LogRecord) -> MyOwnResult<()> {
+                            let mut t = stderr()
+                                .ok_or(error("Term", "Could not create terminal"))?;
+
+                            match record.level() {
+                                LogLevel::Error => {
+                                    t.fg(RED)?;
+                                    write!(t, "[ERROR] ")?;
+                                    t.reset()?;
+                                    writeln!(t, "{}", record.args())?;
+                                }
+                                _ => {
+                                    writeln!(t, "[{}] {}", record.level(), record.args())?;
+                                }
+                            }
+                            Ok(())
+                        }
+                        ```
+                        </script>
+                    </section>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Error types
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Error trait
+                        A standard library trait:
+                        ```rust
+                        use std::fmt::{Debug, Display};
+
+                        trait Error: Debug + Display {
+                            /// A short description of the error.
+                            fn description(&self) -> &str;
+
+                            /// The lower level cause of this error, if any.
+                            fn cause(&self) -> Option<&Error> { None }
+                        }
+                        ```
+                        - Debug representation of the error
+                        - user-facing Display representation of the error
+                        - short description of the error
+                        - Inspect the causal chain of an error
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Own error types
+                        ```rust
+                        use std::io;
+                        use std::num;
+
+                        #[derive(Debug)]
+                        enum CliError {
+                            Io(io::Error),
+                            Parse(num::ParseIntError),
+                        }
+                        ```
+                        ```rust
+                        use std::error;
+                        use std::fmt;
+
+                        impl fmt::Display for CliError {
+                            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                                match *self {
+                                    // Both underlying errors already impl `Display`,
+                                    // so we defer to their implementations.
+                                    CliError::Io(ref err) => write!(f, "IO error: {}", err),
+                                    CliError::Parse(ref err) => write!(f, "Parse error: {}", err),
+                                }
+                            }
+                        }
+
+                        impl error::Error for CliError {
+                            fn description(&self) -> &str {
+                                // Both underlying errors already impl `Error`,
+                                // so we defer to their implementations.
+                                match *self {
+                                    CliError::Io(ref err) => err.description(),
+                                    CliError::Parse(ref err) => err.description(),
+                                }
+                            }
+
+                            fn cause(&self) -> Option<&error::Error> {
+                                match *self {
+                                    CliError::Io(ref err) => Some(err),
+                                    CliError::Parse(ref err) => Some(err),
+                                }
+                            }
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Error conversion
+                        - [`From`](https://doc.rust-lang.org/stable/std/convert/trait.From.html) trait can be implemented to convert errors
+                        - `?` operator tries to convert errors as well
+                        - simplest solution: `Box<Error>`
+
+                        ```rust
+                        use std::error::Error;
+                        use std::fs::File;
+                        use std::io::Read;
+                        use std::path::Path;
+
+                        fn file_double<P: AsRef<Path>>(file_path: P)
+                            -> Result<i32, Box<Error>>
+                        {
+                            let mut file = File::open(file_path)?;
+                            let mut contents = String::new();
+                            file.read_to_string(&mut contents)?;
+                            let n = contents.trim().parse::<i32>()?;
+                            Ok(2 * n)
+                        }
+                        ```
+                        - using the trait object Error will cause loosing the underlying type
+                        </script>
+                    </section>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Best practices
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Short example code
+                        - unwrap and expect would fit good
+                        - `String` or `Box<Error>` idiomatic too
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Libraries
+                        - introduce your own error types for libraries
+                        - implement the Error trait for your type
+                        - use combination of Option and Result
+
+                        <br>
+                        _Demo_
+                        </script>
+                    </section>
                 </section>
                 <section data-markdown>
                     <script type="text/template">
