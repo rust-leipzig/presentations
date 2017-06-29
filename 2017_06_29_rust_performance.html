@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>Rust - Performance Pitfalls</title>
+        <meta name="author" content="Sascha Grunert">
+
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/solarized.css">
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section data-markdown>
+                    <script type="text/template">
+                    # Rust
+                    ## Performance
+                    <small>Ninth user group Meetup in Leipzig (2017-06-29)</small>
+                    </script>
+                </section>
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        # Compiler
+
+                        - Rust is pretty good for performance
+                        - Compiler (and LLVM) does a lots of optimizations
+                        - There are some tradeoffs
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Release builds
+
+                        - Rust by default compiles in `debug` mode
+                        - `cargo run --release` to run your code with optimizations
+                        - increases compile time
+                        - optimizations can break benchmarks and tests
+                        - `-C target-cpu=native` can give you a bit of extra performance
+                        - can result in illegal opcodes (`-C target-cpu=skylake`)
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Input/Output
+
+                        - Rust uses unbuffered File IO by default
+                        - wrap them in a `BufWriter` / `BufReader`
+                        - if you read/write at once, buffering won't help you
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Print
+
+                        - default `print!` macros will lock `STDOUT` for each write operation
+                        - manually locking possible:
+
+                        ```rust
+                        let mut out = File::new("test.out");
+                        println!("{}", header);
+                        for line in lines {
+                            println!("{}", line);
+                            writeln!(out, "{}", line);
+                        }
+                        println!("{}", footer);
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        Locks only once:
+
+                        ```rust
+                        {
+                            let mut out = File::new("test.out");
+                            let mut buf = BufWriter::new(out);
+                            let mut lock = io::stdout().lock();
+                            writeln!(lock, "{}", header);
+                            for line in lines {
+                                writeln!(lock, "{}", line);
+                                writeln!(buf, "{}", line);
+                            }
+                            writeln!(lock, "{}", footer);
+                        }   // end scope to unlock stdout and flush/close buf
+                        ```
+                        The same apply to networking IO.
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Reading lines
+
+                        - `Read::lines()` iterator is very easy to use
+                        - allocates a `String` for each line
+
+                        ```rust
+                        for line in buf.lines() {
+                            let line = line.unwrap();
+                            // do something with line
+                        }
+                        ```
+
+                        Remove extra allocation per line:
+                        ```rust
+                        let mut line = String::new(); // may also use with_capacity if you can guess
+                        while buf.read_line(&mut line).unwrap() > 0 {
+                            // do something with line
+                            line.clear(); // clear to reuse the buffer
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## `str` vs `&[u8]`
+
+                        - string encoding costs performance (UTF-8 checks)
+                        - use bytes directly when possible (`Vec<u8>` / `&[u8]`)
+                        - `str::from_utf8_unchecked()` (requires `unsafe`)
+                        - most parser crates operate on `&[u8]` already
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Hashing
+
+                        - Rust chooses sensible, safe defaults and allows you to override them
+                        - [fnv](https://crates.io/crates/fnv) is a fast hashing example
+                        - hash key distribution matters here as well
+                        - try out `BTreeMap` and `BTreeSet`
+                        - [odermap](https://crates.io/crates/ordermap) could be fun as well
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Do not index
+
+                        - in most simple cases using an iterator will be faster than an indexed loop
+                        ```rust
+                        for i in 0..(xs.len()) {
+                            let x = xs[i];
+                            // do something with x
+                        }
+                        ```
+                        Better:
+                        ```rust
+                        for x in &xs {
+                            // do something with x
+                        }
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Indexing
+
+                        - if you use need the index `i`, use `for (i, x) in xs.iter().enumerate()`
+                        - the iterator loop borrows `xs` whereas the indexed loops does so only for the indexing operation
+                        - index to pass the borrow checker, or use `xs.iter().windows(2)`
+                        - specialized iterators to e.g. remove elements in-place ([`Drain`](https://doc.rust-lang.org/std/vec/struct.Drain.html))
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Needless `collect()`
+
+                        - `FromIterator::collect()` incurs allocation for a new collection 
+                        - forceas evaluation for each iteration step
+                        - do you really need collect?
+
+                        ```rust
+                        let nopes : Vec<_> = bleeps.iter().map(boop).collect();
+                        let frungies : Vec<_> = nopes.iter().filter(|x| x > MIN_THRESHOLD).collect();
+                        ```
+                        Better:
+                        ```rust
+                        let frungies : Vec<_> = bleeps.iter()
+                              .map(boop)
+                              .filter(|x| x > MIN_THRESHOLD)
+                              .collect();
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Needless allocations
+
+                        - fight with the borrow checker!
+                        - NOT: a simple fix is to call `.to_owned()` or `.clone()`
+                        - use `&str` instead of `&String` (or even `String`)
+                        - use `&[T]` (slices) instead of `&Vec<T>` (or even `Vec<T>`)
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Needless allocations
+                        - use `&mut [T]` instead of `&mut Vec<T>` if you have no resizing operation
+                        - get away with arrays instead of `Vecs` (reference to get a slice)
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Needless allocations
+                        - If you cannot replace your owned value with a borrow, consider using a `Cow`
+                            - it is often possible to replace `String` with `Cow<'static, str>` and `Vec<T> with Cow<'a, [T]>` if you can borrow in some but not all cases
+                        - Sometime when changing an enum, we want to keep parts of the old value. Use `mem::replace()` [to avoid needless clones](https://github.com/rust-unofficial/patterns/blob/master/idioms/mem-replace.md).
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Other needless work
+
+                        A bit more lazyness can make a positive difference
+
+                        In the name of readability, people may convert this:
+                        ```rust
+                        match my_option {
+                            Some(foo) -> frobnicate(foo),
+                            None -> calculate_default_frob(),
+                        }
+                        ```
+                        to 
+                        ```rust
+                        my_option.map_or_else(calculate_default_frob, frobnicate)
+                        ```
+                        </script>
+                    </section>
+                    <section data-markdown>
+                        <script type="text/template">
+                        ## Get help
+
+                        Ask [clippy](https://github.com/Manishearth/rust-clippy) where to remove things.
+                        </script>
+                    </section>
+                </section>
+                <section data-markdown>
+                    <script type="text/template">
+                    # Thank you!
+                    </script>
+                </section>
+            </div>
+        </div>
+
+        <script src="lib/js/head.min.js"></script>
+        <script src="js/reveal.js"></script>
+
+        <script>
+            // More info https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                backgroundTransition: 'zoom',
+                center: true,
+                controls: true,
+                history: true,
+                progress: true,
+                transition: 'zoom',
+
+                // More info https://github.com/hakimel/reveal.js#dependencies
+                dependencies: [
+                    { src: 'plugin/markdown/marked.js' },
+                    { src: 'plugin/markdown/markdown.js' },
+                    { src: 'plugin/notes/notes.js', async: true },
+                    { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+                    { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+                ]
+            });
+        </script>
+    </body>
+</html>
